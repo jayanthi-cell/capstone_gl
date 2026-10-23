@@ -10,28 +10,33 @@ from preprocessing import (
     get_prediction_label
 )
 
+
 st.set_page_config(
     page_title="Pneumonia Detection",
     page_icon="🩻",
     layout="centered"
 )
 
+
 IMG_SIZE = 224
-MODEL_PATH = "model/pneumonia_detection_vgg16_v1_0.keras"
+MODEL_PATH = "model/pneumonia_vgg16_savedmodel"
 
 
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model(MODEL_PATH)
+    saved_model = tf.saved_model.load(MODEL_PATH)
+    return saved_model.signatures["serving_default"]
 
 
-model = load_model()
+predict_fn = load_model()
+
 
 st.title("🩻 Pneumonia Detection from Chest X-rays")
 st.write(
     "Upload a chest X-ray in DICOM, PNG, JPG, or JPEG format. "
     "The model predicts whether pneumonia is present and displays its probability."
 )
+
 
 threshold = st.slider(
     "Classification threshold",
@@ -41,10 +46,12 @@ threshold = st.slider(
     step=0.01
 )
 
+
 uploaded_file = st.file_uploader(
     "Upload a chest X-ray",
     type=["dcm", "png", "jpg", "jpeg"]
 )
+
 
 if uploaded_file is not None:
     st.subheader("Uploaded Chest X-ray")
@@ -67,9 +74,11 @@ if uploaded_file is not None:
             img_size=IMG_SIZE
         )
 
-        probability = float(
-            model.predict(model_input, verbose=0)[0][0]
+        prediction = predict_fn(
+            tf.constant(model_input, dtype=tf.float32)
         )
+
+        probability = float(list(prediction.values())[0][0][0])
 
         predicted_class = get_prediction_label(
             probability,
@@ -112,6 +121,7 @@ if uploaded_file is not None:
 
 else:
     st.info("Please upload a DICOM, PNG, JPG, or JPEG chest X-ray file.")
+
 
 st.divider()
 st.caption(
