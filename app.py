@@ -1,37 +1,31 @@
 
 import numpy as np
 import streamlit as st
-import tensorflow as tf
+from tensorflow.keras.models import load_model
 
 from preprocessing import (
     preprocess_dicom,
     preprocess_image,
     prepare_model_input,
-    get_prediction_label
+    get_prediction_label,
 )
-
 
 st.set_page_config(
     page_title="Pneumonia Detection",
     page_icon="🩻",
-    layout="centered"
+    layout="centered",
 )
 
-
 IMG_SIZE = 224
-BASE_DIR = Path(__file__).resolve().parent
-
-MODEL_PATH = BASE_DIR / "deployment_files" / "pneumonia_detection_resnet50_v1_0.keras"
+MODEL_PATH = "pneumonia_detection_resnet50_v1_0.keras"
 
 
 @st.cache_resource
-def load_model():
-    saved_model = tf.saved_model.load(MODEL_PATH)
-    return saved_model.signatures["serving_default"]
+def get_model():
+    return load_model(MODEL_PATH, safe_mode=False)
 
 
-predict_fn = load_model()
-
+model = get_model()
 
 st.title("🩻 Pneumonia Detection from Chest X-rays")
 st.write(
@@ -39,21 +33,18 @@ st.write(
     "The model predicts whether pneumonia is present and displays its probability."
 )
 
-
 threshold = st.slider(
     "Classification threshold",
     min_value=0.0,
     max_value=1.0,
     value=0.5,
-    step=0.01
+    step=0.01,
 )
-
 
 uploaded_file = st.file_uploader(
     "Upload a chest X-ray",
-    type=["dcm", "png", "jpg", "jpeg"]
+    type=["dcm", "png", "jpg", "jpeg"],
 )
-
 
 if uploaded_file is not None:
     st.subheader("Uploaded Chest X-ray")
@@ -68,23 +59,20 @@ if uploaded_file is not None:
             image,
             caption="Uploaded chest X-ray",
             use_container_width=True,
-            clamp=True
+            clamp=True,
         )
 
         display_image, model_input = prepare_model_input(
             image,
-            img_size=IMG_SIZE
+            img_size=IMG_SIZE,
         )
 
-        prediction = predict_fn(
-            tf.constant(model_input, dtype=tf.float32)
-        )
-
-        probability = float(list(prediction.values())[0][0][0])
+        prediction = model.predict(model_input, verbose=0)
+        probability = float(prediction[0][0])
 
         predicted_class = get_prediction_label(
             probability,
-            threshold=threshold
+            threshold=threshold,
         )
 
         st.subheader("Prediction Result")
@@ -117,13 +105,13 @@ if uploaded_file is not None:
 
     except Exception as e:
         st.error(
-            f"Could not process the uploaded file. "
-            f"Please upload a valid DICOM, PNG, JPG, or JPEG chest X-ray.\n\nError: {e}"
+            "Could not process the uploaded file. "
+            "Please upload a valid DICOM, PNG, JPG, or JPEG chest X-ray.\n\n"
+            f"Error: {e}"
         )
 
 else:
     st.info("Please upload a DICOM, PNG, JPG, or JPEG chest X-ray file.")
-
 
 st.divider()
 st.caption(
