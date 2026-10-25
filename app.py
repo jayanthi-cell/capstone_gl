@@ -17,7 +17,7 @@ st.set_page_config(
     layout="centered"
 )
 
-
+BASE_DIR = Path(__file__).resolve().parent
 IMG_SIZE = 224
 MODEL_PATH = BASE_DIR / "fixed_model.keras"
 
