@@ -21,7 +21,7 @@ st.set_page_config(
 IMG_SIZE = 224
 BASE_DIR = Path(__file__).resolve().parent
 
-MODEL_PATH = BASE_DIR / "pneumonia_detection_resnet50_v1_0.keras"
+MODEL_PATH = BASE_DIR / "deployment_files" / "pneumonia_detection_resnet50_v1_0.keras"
 
 
 @st.cache_resource
