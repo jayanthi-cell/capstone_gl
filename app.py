@@ -17,9 +17,11 @@ st.set_page_config(
     layout="centered"
 )
 
-BASE_DIR = Path(__file__).resolve().parent
+
 IMG_SIZE = 224
-MODEL_PATH = BASE_DIR / "fixed_model.keras"
+BASE_DIR = Path(__file__).resolve().parent
+
+MODEL_PATH = BASE_DIR / "pneumonia_detection_resnet50_v1_0.keras"
 
 
 @st.cache_resource
