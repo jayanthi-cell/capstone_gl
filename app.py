@@ -1,7 +1,21 @@
 
 import numpy as np
 import streamlit as st
-from tensorflow.keras.models import load_model
+import tensorflow as tf
+from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.applications.resnet50 import preprocess_input
+from tensorflow.keras.layers import (
+    Input,
+    Lambda,
+    GlobalAveragePooling2D,
+    Dense,
+    Dropout,
+    BatchNormalization,
+    RandomRotation,
+    RandomTranslation,
+    RandomZoom,
+)
+from tensorflow.keras.models import Model, load_model
 
 from preprocessing import (
     preprocess_dicom,
@@ -10,19 +24,58 @@ from preprocessing import (
     get_prediction_label,
 )
 
-st.set_page_config(
-    page_title="Pneumonia Detection",
-    page_icon="🩻",
-    layout="centered",
-)
-
 IMG_SIZE = 224
+
 MODEL_PATH = "pneumonia_detection_resnet50_v1_0.keras"
 
 
 @st.cache_resource
 def get_model():
-    return load_model(MODEL_PATH, safe_mode=False)
+    # Rebuild exactly the same architecture used during training
+    resnet_base = ResNet50(
+        weights=None,
+        include_top=False,
+        input_shape=(224, 224, 3),
+    )
+
+    for layer in resnet_base.layers:
+        layer.trainable = False
+
+    inputs = Input(shape=(224, 224, 1), name="grayscale_input")
+
+    x = RandomRotation(0.05)(inputs)
+    x = RandomTranslation(0.1, 0.1)(x)
+    x = RandomZoom(0.1)(x)
+
+    x = Lambda(
+        lambda z: tf.image.grayscale_to_rgb(z),
+        output_shape=(224, 224, 3),
+        name="grayscale_to_rgb",
+    )(x)
+
+    x = Lambda(
+        lambda z: preprocess_input(z),
+        output_shape=(224, 224, 3),
+        name="resnet_preprocess",
+    )(x)
+
+    x = resnet_base(x)
+
+    x = GlobalAveragePooling2D()(x)
+    x = Dense(256, activation="relu")(x)
+    x = BatchNormalization()(x)
+    x = Dropout(0.4)(x)
+    x = Dense(64, activation="relu")(x)
+    x = Dropout(0.3)(x)
+
+    outputs = Dense(1, activation="sigmoid")(x)
+
+    model = Model(inputs, outputs, name="ResNet50_Improved")
+
+    # Load only the trained weights; do not deserialize Lambda layers
+    model.load_weights(MODEL_PATH)
+
+    return model
 
 
 model = get_model()

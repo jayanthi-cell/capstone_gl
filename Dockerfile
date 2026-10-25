@@ -12,7 +12,7 @@ RUN pip install --timeout=1000 --retries 10 -r requirements.txt
 
 COPY app.py .
 COPY preprocessing.py .
-COPY pneumonia_detection_resnet50_v1_0.keras 
+COPY pneumonia_detection_resnet50_v1_0.keras
 
 EXPOSE 8501
 
